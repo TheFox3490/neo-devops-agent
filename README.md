@@ -47,6 +47,71 @@
 
 ---
 
-## Запуск проекта
+## Структура проекта
 
-*(Инструкции по локальному запуску агента, установке зависимостей и конфигурации `.env` будут добавлены по мере готовности базового MVP)*
+На текущем этапе в репозитории реализован пре-MVP: API-сервис для первичной классификации SRE-инцидентов.
+
+```text
+neo-devops-agent/
+├── .env.example       # Шаблон конфигурации для подключения к LLM
+├── .gitignore
+├── .python-version    # Зафиксированная версия Python
+├── api.py             # Основной код FastAPI приложения (эндпоинты и Pydantic-схемы)
+├── main.py            
+├── pyproject.toml     # Конфигурация проекта и зависимости (managed by uv)
+├── README.md
+└── test_api.py        # Скрипт для тестирования API-вызовов
+```
+
+---
+
+## Установка и запуск (API классификации инцидентов)
+
+Проект использует пакетный менеджер `uv`. Для запуска прототипа API:
+
+1. **Настройте окружение:** Скопируйте `.env.example` в `.env` и укажите данные для подключения к OpenAI-совместимому API.
+2. **Установите зависимости:**
+   ```bash
+   uv sync
+   ```
+3. **Запустите FastAPI сервер:**
+   ```bash
+   uv run uvicorn api:app --reload
+   ```
+
+**Пример успешного старта сервера:**
+```text
+INFO:     Will watch for changes in these directories: ['C:\Users\nshilnikov\Desktop\neostudy\aiengineer\neo-devops-agent']
+INFO:     Uvicorn running on [http://127.0.0.1:8000](http://127.0.0.1:8000) (Press CTRL+C to quit)
+INFO:     Started reloader process [9180] using StatReload
+INFO:     Started server process [24376]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+---
+
+## Тестирование API (Структурированный вывод)
+
+API настроено на генерацию ответов с низкой температурой и возвращает валидный JSON через механизм структурированного вывода. 
+
+Для тестирования откройте второй терминал и запустите тестовый скрипт, имитирующий отправку сырого лога инцидента:
+
+```bash
+uv run test_api.py
+```
+
+**Ожидаемый результат (ответ от LLM):**
+```text
+Отправляем запрос на [http://127.0.0.1:8000/analyze-incident](http://127.0.0.1:8000/analyze-incident)...
+
+Status Code: 200
+Ответ успешно получен и распарсен (JSON):
+{
+    "incident_type": "MaxConnectionsExceeded",
+    "severity": "Critical",
+    "infrastructure": "Database",
+    "summary": "Production PostgreSQL cluster exceeded max_connections, causing 99% CPU load and 500 errors from API servers."
+}
+```
+*(В логах uvicorn при этом зафиксируется успешная обработка POST-запроса: `127.0.0.1:61526 - "POST /analyze-incident HTTP/1.1" 200 OK`)*
